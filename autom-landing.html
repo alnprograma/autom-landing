@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autom — Seu robô de agendamentos</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #0af;
+    --cyan: #0ff;
+    --dark: #020b18;
+    --darker: #010810;
+    --card: rgba(0,170,255,0.05);
+    --border: rgba(0,170,255,0.15);
+    --text: #e0f0ff;
+    --muted: #6a9ab8;
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--darker);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--cyan);
+    border-radius: 50%;
+    position: fixed; pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(0,255,255,0.4);
+    border-radius: 50%;
+    position: fixed; pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.15s ease-out, width 0.3s, height 0.3s;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,170,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,170,255,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Nav */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 6%;
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(2,11,24,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    text-shadow: 0 0 20px rgba(0,255,255,0.5);
+  }
+  .logo span { color: var(--blue); }
+  nav a {
+    color: var(--muted); text-decoration: none;
+    font-size: 13px; letter-spacing: 1px;
+    transition: color 0.2s;
+  }
+  nav a:hover { color: var(--cyan); }
+  .nav-links { display: flex; gap: 32px; }
+  .nav-cta {
+    background: transparent;
+    border: 1px solid var(--blue);
+    color: var(--blue) !important;
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 12px !important;
+    letter-spacing: 2px;
+    transition: all 0.3s !important;
+  }
+  .nav-cta:hover {
+    background: var(--blue) !important;
+    color: var(--darker) !important;
+    box-shadow: 0 0 20px rgba(0,170,255,0.4);
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 6% 80px;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--cyan);
+    margin-bottom: 32px;
+    animation: fadeUp 0.8s ease both;
+  }
+  .badge-dot {
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+  .hero h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(36px, 7vw, 80px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+  .hero h1 .line1 { display: block; color: var(--text); }
+  .hero h1 .line2 {
+    display: block;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p {
+    font-size: clamp(15px, 2vw, 18px);
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 48px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+  .hero-btns {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    color: var(--darker);
+    padding: 16px 36px;
+    border-radius: 4px;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-decoration: none;
+    transition: all 0.3s;
+    box-shadow: 0 0 30px rgba(0,170,255,0.3);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(0,170,255,0.5);
+  }
+  .btn-secondary {
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 16px 36px;
+    border-radius: 4px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-decoration: none;
+    transition: all 0.3s;
+  }
+  .btn-secondary:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  /* Glow orb */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: rgba(0,170,255,0.08);
+    top: -100px; left: -100px;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: rgba(0,255,255,0.06);
+    bottom: 0; right: -100px;
+  }
+
+  /* Stats */
+  .stats {
+    display: flex; justify-content: center; gap: 60px;
+    flex-wrap: wrap;
+    padding: 60px 6%;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,170,255,0.02);
+    position: relative; z-index: 1;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .stat-item { text-align: center; }
+  .stat-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 36px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label { font-size: 12px; color: var(--muted); letter-spacing: 1px; margin-top: 4px; }
+
+  /* Sections */
+  section { padding: 100px 6%; position: relative; z-index: 1; }
+  .section-tag {
+    font-size: 11px; letter-spacing: 3px; color: var(--blue);
+    text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-tag::before {
+    content: ''; width: 30px; height: 1px; background: var(--blue);
+  }
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(24px, 4vw, 42px);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .section-sub { color: var(--muted); font-size: 16px; line-height: 1.7; max-width: 540px; }
+
+  /* How it works */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 2px;
+    margin-top: 64px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .step {
+    padding: 40px 32px;
+    background: var(--card);
+    position: relative;
+    transition: background 0.3s;
+  }
+  .step:hover { background: rgba(0,170,255,0.1); }
+  .step-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 48px;
+    font-weight: 900;
+    color: rgba(0,170,255,0.12);
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+  .step-icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+    display: block;
+  }
+  .step h3 {
+    font-size: 16px; font-weight: 600;
+    margin-bottom: 10px; color: var(--text);
+  }
+  .step p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .step-line {
+    position: absolute; top: 50%; right: -1px;
+    width: 2px; height: 40px;
+    background: linear-gradient(var(--blue), var(--cyan));
+    transform: translateY(-50%);
+  }
+
+  /* Features */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 64px;
+  }
+  .feature-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    background: var(--card);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--blue), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feature-card:hover { border-color: rgba(0,170,255,0.4); transform: translateY(-4px); }
+  .feature-card:hover::before { opacity: 1; }
+  .feature-icon {
+    font-size: 32px; margin-bottom: 16px; display: block;
+  }
+  .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
+  .feature-card p { font-size: 13px; color: var(--muted); line-height: 1.7; }
+
+  /* Niches */
+  .niches {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-top: 48px;
+  }
+  .niche-tag {
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    color: var(--muted);
+    transition: all 0.3s;
+    cursor: default;
+  }
+  .niche-tag:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+    background: rgba(0,170,255,0.05);
+  }
+
+  /* CTA */
+  .cta-section {
+    text-align: center;
+    padding: 120px 6%;
+    position: relative;
+    z-index: 1;
+  }
+  .cta-box {
+    max-width: 700px;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 80px 60px;
+    background: var(--card);
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-box::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,170,255,0.1), transparent 70%);
+    pointer-events: none;
+  }
+  .cta-box h2 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(22px, 4vw, 38px);
+    font-weight: 700;
+    margin-bottom: 16px;
+    line-height: 1.2;
+  }
+  .cta-box p { color: var(--muted); font-size: 16px; margin-bottom: 40px; line-height: 1.7; }
+  .whatsapp-btn {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: #25d366;
+    color: white;
+    padding: 18px 40px;
+    border-radius: 4px;
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-decoration: none;
+    transition: all 0.3s;
+    box-shadow: 0 0 30px rgba(37,211,102,0.3);
+  }
+  .whatsapp-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px rgba(37,211,102,0.5);
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 32px 6%;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px;
+    position: relative; z-index: 1;
+  }
+  footer .logo { font-size: 16px; }
+  footer p { font-size: 12px; color: var(--muted); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal { opacity: 0; transform: translateY(30px); transition: all 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 600px) {
+    .nav-links { display: none; }
+    .stats { gap: 32px; }
+    .cta-box { padding: 40px 24px; }
+    .step-line { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav>
+  <div class="logo">AUTO<span>M</span></div>
+  <div class="nav-links">
+    <a href="#como-funciona">Como funciona</a>
+    <a href="#funcionalidades">Funcionalidades</a>
+    <a href="#nichos">Para quem</a>
+    <a href="#contato" class="nav-cta">COMEÇAR</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <div class="hero-badge">
+    <span class="badge-dot"></span>
+    INTELIGÊNCIA ARTIFICIAL 24H
+  </div>
+
+  <h1>
+    <span class="line1">SEU NEGÓCIO AGENDA</span>
+    <span class="line2">ENQUANTO VOCÊ DORME</span>
+  </h1>
+
+  <p>
+    O Autom é um robô de agendamentos que trabalha por você 24 horas por dia, 7 dias por semana — sem parar, sem errar, sem perder um cliente.
+  </p>
+
+  <div class="hero-btns">
+    <a href="https://wa.me/5571983970455?text=Quero+conhecer+o+Autom" class="btn-primary" target="_blank">QUERO O AUTOM</a>
+    <a href="#como-funciona" class="btn-secondary">VER COMO FUNCIONA</a>
+  </div>
+</section>
+
+<div class="stats reveal">
+  <div class="stat-item">
+    <div class="stat-num">24/7</div>
+    <div class="stat-label">Disponível sempre</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">0</div>
+    <div class="stat-label">Agendamentos perdidos</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">3min</div>
+    <div class="stat-label">Para agendar</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">Automático</div>
+  </div>
+</div>
+
+<section id="como-funciona">
+  <div class="section-tag">processo</div>
+  <h2 class="section-title reveal">Como o Autom<br>trabalha por você</h2>
+  <p class="section-sub reveal">Três passos simples. Seu cliente agenda sozinho, você só aparece para atender.</p>
+
+  <div class="steps reveal">
+    <div class="step">
+      <div class="step-num">01</div>
+      <span class="step-icon">💬</span>
+      <h3>Cliente manda mensagem</h3>
+      <p>Qualquer hora do dia ou da noite, o cliente envia uma mensagem no WhatsApp do seu negócio.</p>
+      <div class="step-line"></div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <span class="step-icon">🤖</span>
+      <h3>Autom responde e agenda</h3>
+      <p>O robô entende o pedido, verifica os horários disponíveis e confirma o agendamento automaticamente.</p>
+      <div class="step-line"></div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <span class="step-icon">📅</span>
+      <h3>Agenda atualizada na hora</h3>
+      <p>O compromisso aparece no Google Calendar e você recebe uma notificação com todos os detalhes.</p>
+    </div>
+  </div>
+</section>
+
+<section id="funcionalidades" style="background: rgba(0,170,255,0.02); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="section-tag">funcionalidades</div>
+  <h2 class="section-title reveal">Tudo que você precisa.<br>Nada que você não precisa.</h2>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <span class="feature-icon">🌙</span>
+      <h3>Nunca dorme</h3>
+      <p>Agendamentos às 3 da manhã, domingo à noite, feriado — o Autom está sempre pronto para atender.</p>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">🚫</span>
+      <h3>Zero conflito de horários</h3>
+      <p>O robô verifica automaticamente os horários ocupados e nunca agenda dois clientes no mesmo horário.</p>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">📲</span>
+      <h3>WhatsApp nativo</h3>
+      <p>Sem apps para baixar. Seu cliente agenda direto pelo WhatsApp, o canal que já usa todos os dias.</p>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">📅</span>
+      <h3>Google Calendar integrado</h3>
+      <p>Cada agendamento aparece automaticamente na sua agenda com nome, serviço e telefone do cliente.</p>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">🔔</span>
+      <h3>Notificação instantânea</h3>
+      <p>Você recebe uma mensagem no WhatsApp sempre que um novo agendamento for confirmado.</p>
+    </div>
+    <div class="feature-card reveal">
+      <span class="feature-icon">🧠</span>
+      <h3>Inteligência artificial</h3>
+      <p>Conversa natural, entende diferentes formas de escrever e guia o cliente até a confirmação.</p>
+    </div>
+  </div>
+</section>
+
+<section id="nichos">
+  <div class="section-tag">para quem</div>
+  <h2 class="section-title reveal">Para qualquer negócio<br>que agenda clientes</h2>
+  <p class="section-sub reveal">Se o seu negócio depende de horários marcados, o Autom trabalha por você.</p>
+
+  <div class="niches reveal">
+    <span class="niche-tag">✂️ Barbearias</span>
+    <span class="niche-tag">💆 Salões de beleza</span>
+    <span class="niche-tag">🦷 Clínicas odontológicas</span>
+    <span class="niche-tag">🏋️ Personal trainers</span>
+    <span class="niche-tag">💉 Clínicas estéticas</span>
+    <span class="niche-tag">🐾 Pet shops</span>
+    <span class="niche-tag">🧖 Spas e massagens</span>
+    <span class="niche-tag">👁️ Clínicas de saúde</span>
+    <span class="niche-tag">📸 Fotógrafos</span>
+    <span class="niche-tag">🏠 Consultores</span>
+    <span class="niche-tag">⚽ Quadras esportivas</span>
+    <span class="niche-tag">+ muito mais</span>
+  </div>
+</section>
+
+<section id="depoimentos" style="border-top: 1px solid var(--border);">
+  <div class="section-tag">depoimentos</div>
+  <h2 class="section-title reveal">O que dizem os<br>primeiros usuários</h2>
+  <p class="section-sub reveal">Negócios reais que pararam de perder clientes fora do horário comercial.</p>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 64px;">
+
+    <div class="feature-card reveal" style="position:relative;">
+      <div style="font-size: 32px; color: var(--blue); font-family: 'Orbitron', monospace; line-height:1; margin-bottom: 16px; opacity: 0.6;">"</div>
+      <p style="font-size: 14px; color: var(--text); line-height: 1.8; margin-bottom: 24px;">Antes eu perdia cliente todo fim de semana porque ninguém atendia o WhatsApp. Agora o Autom agenda sozinho e quando chego na segunda já tem a agenda cheia.</p>
+      <div style="display:flex; align-items:center; gap:12px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <div style="width:40px; height:40px; border-radius:50%; background: linear-gradient(135deg, var(--blue), var(--cyan)); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px; color: var(--darker); flex-shrink:0;">RS</div>
+        <div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">Rafael Santos</div>
+          <div style="font-size:11px; color:var(--muted);">Barbearia RS — Salvador, BA</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-card reveal" style="position:relative; border-color: rgba(0,170,255,0.3);">
+      <div style="font-size: 32px; color: var(--cyan); font-family: 'Orbitron', monospace; line-height:1; margin-bottom: 16px; opacity: 0.6;">"</div>
+      <p style="font-size: 14px; color: var(--text); line-height: 1.8; margin-bottom: 24px;">Minha clínica funciona das 8h às 18h mas os agendamentos chegam até meia noite. O Autom atende todos, confirma no calendar e eu só apareço para trabalhar. Incrível.</p>
+      <div style="display:flex; align-items:center; gap:12px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <div style="width:40px; height:40px; border-radius:50%; background: linear-gradient(135deg, #0f6e56, #1d9e75); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px; color: white; flex-shrink:0;">CA</div>
+        <div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">Carla Andrade</div>
+          <div style="font-size:11px; color:var(--muted);">Clínica Estética — Feira de Santana, BA</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-card reveal" style="position:relative;">
+      <div style="font-size: 32px; color: var(--blue); font-family: 'Orbitron', monospace; line-height:1; margin-bottom: 16px; opacity: 0.6;">"</div>
+      <p style="font-size: 14px; color: var(--text); line-height: 1.8; margin-bottom: 24px;">Tinha medo que fosse complicado demais para meus clientes usarem. Mas é só mandar mensagem no WhatsApp normal. Foi a melhor decisão que tomei para o meu negócio — não me arrependo nenhum segundo.</p>
+      <div style="display:flex; align-items:center; gap:12px; border-top: 1px solid var(--border); padding-top: 16px;">
+        <div style="width:40px; height:40px; border-radius:50%; background: linear-gradient(135deg, #854f0b, #ef9f27); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:14px; color: white; flex-shrink:0;">ML</div>
+        <div>
+          <div style="font-size:13px; font-weight:600; color:var(--text);">Marcos Lima</div>
+          <div style="font-size:11px; color:var(--muted);">Studio de Tatuagem — Recife, PE</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="cta-section" id="contato">
+  <div class="cta-box reveal">
+    <h2>Pronto para nunca mais<br>perder um agendamento?</h2>
+    <p>Fale com a gente agora e coloque o Autom trabalhando pelo seu negócio ainda essa semana.</p>
+    <a href="https://wa.me/5571983970455?text=Quero+conhecer+o+Autom" class="whatsapp-btn" target="_blank">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.549 4.118 1.515 5.857L.057 23.882a.5.5 0 0 0 .606.64l6.197-1.624A11.952 11.952 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22a9.952 9.952 0 0 1-5.073-1.384l-.362-.216-3.747.982.999-3.648-.236-.374A9.953 9.953 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+      FALAR NO WHATSAPP
+    </a>
+  </div>
+</section>
+
+<footer>
+  <div class="logo">AUTO<span>M</span></div>
+  <p>© 2026 Autom. Seu robô de agendamentos.</p>
+  <p style="font-size:11px; color: rgba(106,154,184,0.5);">Powered by IA</p>
+</footer>
+
+<script>
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cursor.style.left = mx+'px'; cursor.style.top = my+'px'; });
+  function animRing() { rx += (mx-rx)*0.12; ry += (my-ry)*0.12; ring.style.left = rx+'px'; ring.style.top = ry+'px'; requestAnimationFrame(animRing); }
+  animRing();
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
